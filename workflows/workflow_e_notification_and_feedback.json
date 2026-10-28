@@ -1,0 +1,140 @@
+{
+  "name": "Workflow E: Notification Digest & User Feedback Loop",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e1000000-0000-4000-8000-000000000001",
+      "name": "Execute Workflow Trigger: Send Digest",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [220, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT tr.id AS tailored_resume_id, tr.resume_version_id, tr.tailoring_summary,\n       tr.docx_filename, tr.pdf_filename, tr.created_at AS tailored_at,\n       jm.overall_match_score, jm.reasons_for_score, jm.missing_required_skills,\n       jm.potential_eligibility_gaps, jm.recommendation,\n       j.id AS job_uuid, j.title, j.company, j.location, j.work_mode,\n       j.posted_at, j.application_url, j.first_seen_at,\n       u.id AS user_id, u.email AS user_email, u.full_name,\n       p.notification_method, p.notification_target\nFROM tailored_resumes tr\nJOIN job_matches jm ON jm.id = tr.job_match_id\nJOIN jobs j ON j.id = tr.job_uuid\nJOIN users u ON u.id = tr.user_id\nJOIN user_preferences p ON p.user_id = u.id\nLEFT JOIN notifications n\n  ON n.tailored_resume_id = tr.id AND n.delivery_status = 'sent'\nWHERE tr.qa_status = 'passed'\n  AND n.id IS NULL\nORDER BY jm.overall_match_score DESC;",
+        "options": {}
+      },
+      "id": "e1000000-0000-4000-8000-000000000002",
+      "name": "Postgres: Load Undelivered Verified Resumes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [480, 200],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nif (items.length === 0) return [];\n\nconst user = items[0];\nconst dateStr = new Date().toISOString().slice(0, 10);\nconst idempotencyKey = `digest:${user.user_id}:${dateStr}:${items.map(x => x.resume_version_id).join(',')}`;\n\nconst rowsHtml = items.map((job, idx) => `\n  <div style=\"border:1px solid #d1d5db;border-radius:8px;padding:16px;margin-bottom:16px;font-family:sans-serif;\">\n    <h3 style=\"margin:0 0 6px 0;color:#111827;\">${idx + 1}. ${job.title} — ${job.company} (${job.overall_match_score}/100)</h3>\n    <p style=\"margin:4px 0;color:#4b5563;font-size:14px;\">\n      <strong>Location:</strong> ${job.location} (${job.work_mode}) |\n      <strong>Posted:</strong> ${job.posted_at ? new Date(job.posted_at).toISOString().slice(0, 10) : 'N/A'} |\n      <strong>Discovered:</strong> ${new Date(job.first_seen_at).toISOString().slice(0, 10)}\n    </p>\n    <p style=\"margin:8px 0;font-size:14px;\"><strong>Why it matches:</strong> ${job.reasons_for_score}</p>\n    <p style=\"margin:8px 0;font-size:14px;\"><strong>Tailoring Summary:</strong> ${job.tailoring_summary}</p>\n    <p style=\"margin:8px 0;font-size:13px;color:#b45309;\">\n      <strong>Missing Skills / Eligibility Notes:</strong> ${(job.missing_required_skills || []).join(', ') || 'None'}\n    </p>\n    <p style=\"margin:10px 0 4px 0;font-size:13px;\">\n      <strong>Resume Version ID:</strong> <code>${job.resume_version_id}</code><br/>\n      <strong>Generated Files:</strong> ${job.docx_filename} / ${job.pdf_filename || 'N/A'}\n    </p>\n    <p style=\"margin:12px 0 0 0;\">\n      <a href=\"${job.application_url}\" style=\"background:#2563eb;color:#ffffff;padding:8px 14px;text-decoration:none;border-radius:4px;font-size:13px;\">Direct Application Link</a>\n    </p>\n  </div>\n`).join('\\n');\n\nreturn [{\n  json: {\n    user_id: user.user_id,\n    recipient: user.notification_target || user.user_email,\n    channel: user.notification_method || 'email',\n    subject: `[AI Job Digest] ${items.length} Qualifying Matches & Tailored Resumes (${dateStr})`,\n    html_body: `<h2>Daily Tailored Job Digest for ${user.full_name}</h2>${rowsHtml}`,\n    idempotency_key: idempotencyKey,\n    job_ids: items.map(i => i.job_uuid),\n    tailored_resume_ids: items.map(i => i.tailored_resume_id)\n  }\n}];"
+      },
+      "id": "e1000000-0000-4000-8000-000000000003",
+      "name": "Code: Build Digest Email & Idempotency Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM || 'AI Job Search Agent <noreply@example.com>' }}",
+        "toEmail": "={{ $json.recipient }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "id": "e1000000-0000-4000-8000-000000000004",
+      "name": "Send Email: Deliver Digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1040, 200],
+      "credentials": {
+        "smtp": { "id": "smtp-credentials", "name": "SMTP Email Account" }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (\n  user_id, channel, notification_type, idempotency_key, recipient, subject, delivery_status, sent_at\n) VALUES (\n  $1, $2, 'daily_digest', $3, $4, $5, 'sent', NOW()\n)\nON CONFLICT (idempotency_key) DO NOTHING\nRETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Code: Build Digest Email & Idempotency Key').item.json.user_id,\n  $('Code: Build Digest Email & Idempotency Key').item.json.channel,\n  $('Code: Build Digest Email & Idempotency Key').item.json.idempotency_key,\n  $('Code: Build Digest Email & Idempotency Key').item.json.recipient,\n  $('Code: Build Digest Email & Idempotency Key').item.json.subject\n] }}"
+        }
+      },
+      "id": "e1000000-0000-4000-8000-000000000005",
+      "name": "Postgres: Record Notification Sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1300, 200],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-feedback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e1000000-0000-4000-8000-000000000006",
+      "name": "Webhook: Capture User Job Feedback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 480],
+      "webhookId": "job-feedback-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO application_tracking (\n  user_id, job_uuid, tailored_resume_id, feedback_status, user_notes,\n  approval_required, approved_for_submission\n) VALUES (\n  $1, $2, $3, $4, $5, TRUE, FALSE\n)\nON CONFLICT (user_id, job_uuid) DO UPDATE SET\n  feedback_status = EXCLUDED.feedback_status,\n  user_notes = COALESCE(EXCLUDED.user_notes, application_tracking.user_notes),\n  updated_at = NOW()\nRETURNING id, user_id, job_uuid, feedback_status, approval_required;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.body.user_id,\n  $json.body.job_uuid,\n  $json.body.tailored_resume_id || null,\n  $json.body.feedback_status,\n  $json.body.user_notes || null\n] }}"
+        }
+      },
+      "id": "e1000000-0000-4000-8000-000000000007",
+      "name": "Postgres: Upsert Application Tracking Feedback",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [520, 480],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'recorded', tracking: $json, auto_submission: 'disabled_requires_explicit_user_approval' }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "e1000000-0000-4000-8000-000000000008",
+      "name": "Respond to Webhook: Feedback Saved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [800, 480]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger: Send Digest": {
+      "main": [[{ "node": "Postgres: Load Undelivered Verified Resumes", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Load Undelivered Verified Resumes": {
+      "main": [[{ "node": "Code: Build Digest Email & Idempotency Key", "type": "main", "index": 0 }]]
+    },
+    "Code: Build Digest Email & Idempotency Key": {
+      "main": [[{ "node": "Send Email: Deliver Digest", "type": "main", "index": 0 }]]
+    },
+    "Send Email: Deliver Digest": {
+      "main": [[{ "node": "Postgres: Record Notification Sent", "type": "main", "index": 0 }]]
+    },
+    "Webhook: Capture User Job Feedback": {
+      "main": [[{ "node": "Postgres: Upsert Application Tracking Feedback", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Upsert Application Tracking Feedback": {
+      "main": [[{ "node": "Respond to Webhook: Feedback Saved", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "workflow-f-monitoring-error-recovery"
+  }
+}

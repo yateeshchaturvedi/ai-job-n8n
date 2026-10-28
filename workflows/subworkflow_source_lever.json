@@ -1,0 +1,64 @@
+{
+  "name": "Subworkflow: Lever Job Discovery",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b1200000-0000-4000-8000-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [220, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst boards = Array.isArray(input.board_tokens) && input.board_tokens.length > 0\n  ? input.board_tokens\n  : ['palantir', 'netflix', 'spotify'];\n\nreturn boards.map(token => ({\n  json: {\n    board_token: token,\n    api_url: `https://api.lever.co/v0/postings/${encodeURIComponent(token)}?mode=json&limit=50`,\n    user_preferences: input.user_preferences || {}\n  }\n}));"
+      },
+      "id": "b1200000-0000-4000-8000-000000000002",
+      "name": "Code: Expand Lever Board Tokens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 260]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.api_url }}",
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "b1200000-0000-4000-8000-000000000003",
+      "name": "HTTP Request: Fetch Lever Postings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 260],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst normalized = [];\n\nfor (const item of $input.all()) {\n  const postings = Array.isArray(item.json) ? item.json : (Array.isArray(item.json?.data) ? item.json.data : []);\n  for (const post of postings) {\n    if (!post.id || !post.text) continue;\n    const title = String(post.text).trim();\n    const company = String(post.categories?.team || post.hostedUrl?.split('/')[3] || 'Lever Partner').trim();\n    const location = String(post.categories?.location || 'Unspecified').trim();\n    const commitment = String(post.categories?.commitment || 'full-time').toLowerCase();\n    const workplaceType = String(post.workplaceType || 'unspecified').toLowerCase();\n\n    const workMode = ['remote', 'hybrid', 'onsite'].includes(workplaceType)\n      ? workplaceType\n      : (location.toLowerCase().includes('remote') ? 'remote' : 'unspecified');\n\n    const listText = Array.isArray(post.lists)\n      ? post.lists.map(l => `${l.text}: ${String(l.content || '').replace(/<[^>]+>/g, ' ')}`).join('\\n')\n      : '';\n    const fullDesc = `${post.descriptionPlain || ''}\\n${listText}\\n${post.additionalPlain || ''}`.trim();\n\n    const appUrl = String(post.hostedUrl || post.applyUrl || '').trim();\n    const canonicalUrl = appUrl.split('?')[0].replace(/\\/+$/, '');\n    const fallbackHash = crypto\n      .createHash('sha256')\n      .update(`${company.toLowerCase()}|${title.toLowerCase()}|${location.toLowerCase()}`)\n      .digest('hex');\n    const descHash = crypto.createHash('sha256').update(fullDesc).digest('hex');\n\n    const salaryRange = post.salaryRange\n      ? `${post.salaryRange.min || ''} - ${post.salaryRange.max || ''} ${post.salaryRange.currency || 'USD'}`\n      : null;\n\n    normalized.push({\n      json: {\n        job_id: `lever_${post.id}`,\n        source: 'lever',\n        title,\n        company,\n        location,\n        work_mode: workMode,\n        employment_type: commitment,\n        experience_required: null,\n        required_skills: [],\n        preferred_skills: [],\n        job_description: fullDesc,\n        description_sha256: descHash,\n        salary_range: salaryRange,\n        posted_at: post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString(),\n        application_url: appUrl,\n        canonical_url: canonicalUrl,\n        fallback_dedup_hash: fallbackHash,\n        status: 'discovered'\n      }\n    });\n  }\n}\n\nreturn normalized;"
+      },
+      "id": "b1200000-0000-4000-8000-000000000004",
+      "name": "Code: Normalize Lever Jobs to Common Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 260]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Code: Expand Lever Board Tokens", "type": "main", "index": 0 }]]
+    },
+    "Code: Expand Lever Board Tokens": {
+      "main": [[{ "node": "HTTP Request: Fetch Lever Postings", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request: Fetch Lever Postings": {
+      "main": [[{ "node": "Code: Normalize Lever Jobs to Common Schema", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

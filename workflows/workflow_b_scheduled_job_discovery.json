@@ -1,0 +1,214 @@
+{
+  "name": "Workflow B: Scheduled Job Discovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Schedule Trigger: Daily 07:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.id AS user_id, u.email, u.schedule_enabled,\n       p.target_job_titles, p.technical_skills, p.preferred_locations,\n       p.excluded_companies, p.max_jobs_per_run, p.search_frequency\nFROM users u\nJOIN user_preferences p ON p.user_id = u.id\nWHERE u.is_active = TRUE AND u.schedule_enabled = TRUE\nLIMIT 1;",
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Postgres: Load Active User & Schedule Gate",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_runs (n8n_execution_id, workflow_name, user_id, status)\nVALUES ($1, 'Workflow B: Scheduled Job Discovery', $2, 'running')\nRETURNING id AS run_id;",
+        "options": {
+          "queryReplacement": "={{ [$execution.id, $json.user_id] }}"
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Postgres: Start Workflow Run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT source_key, board_tokens, config_json FROM job_sources WHERE is_enabled = TRUE;",
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Postgres: Load Enabled Job Sources",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [920, 300],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "subworkflow-source-greenhouse",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Execute Subworkflow: Greenhouse Source",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1180, 140],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "subworkflow-source-lever",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Execute Subworkflow: Lever Source",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1180, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "subworkflow-source-web-scrape",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000011",
+      "name": "Execute Subworkflow: Web Scrape (/scrape) & Portal Search",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1180, 460],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3
+      },
+      "id": "b1000000-0000-4000-8000-000000000007",
+      "name": "Merge: Combine Source Listings",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prefs = $('Postgres: Load Active User & Schedule Gate').first().json;\nconst excludedCompanies = (prefs.excluded_companies || []).map(c => String(c).toLowerCase());\nconst targetKeywords = (prefs.target_job_titles || []).flatMap(t => String(t).toLowerCase().split(/\\s+/));\n\nconst seenJobIds = new Set();\nconst seenCanonicalUrls = new Set();\nconst seenFallbackHashes = new Set();\nconst deduplicated = [];\n\nfor (const item of $input.all()) {\n  const job = item.json;\n  if (!job || !job.job_id || !job.title) continue;\n\n  // Exclude blocklisted companies\n  if (excludedCompanies.includes(String(job.company || '').toLowerCase())) {\n    continue;\n  }\n\n  // Relevance pre-filter (devops, cloud, platform, sre, infrastructure, etc.)\n  const titleLower = String(job.title).toLowerCase();\n  const matchesKeyword = targetKeywords.length === 0 || targetKeywords.some(k => k.length > 2 && titleLower.includes(k));\n  if (!matchesKeyword) continue;\n\n  // 3-tier deduplication: source+job_id, canonical_url, fallback hash\n  const sourceIdKey = `${job.source}:${job.job_id}`;\n  if (seenJobIds.has(sourceIdKey)) continue;\n  if (job.canonical_url && seenCanonicalUrls.has(job.canonical_url)) continue;\n  if (job.fallback_dedup_hash && seenFallbackHashes.has(job.fallback_dedup_hash)) continue;\n\n  seenJobIds.add(sourceIdKey);\n  if (job.canonical_url) seenCanonicalUrls.add(job.canonical_url);\n  if (job.fallback_dedup_hash) seenFallbackHashes.add(job.fallback_dedup_hash);\n\n  deduplicated.push({ json: job });\n}\n\n// Sort most recent first and cap by max_jobs_per_run * 2 for evaluation buffer\ndeduplicated.sort((a, b) => new Date(b.json.posted_at) - new Date(a.json.posted_at));\nconst limit = Math.max(Number(prefs.max_jobs_per_run || 15) * 2, 20);\nreturn deduplicated.slice(0, limit);"
+      },
+      "id": "b1000000-0000-4000-8000-000000000008",
+      "name": "Code: Filter & 3-Tier Deduplicate Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1700, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jobs (\n  job_id, source, title, company, location, work_mode, employment_type,\n  experience_required, required_skills, preferred_skills, job_description,\n  description_sha256, salary_range, posted_at, application_url, canonical_url,\n  fallback_dedup_hash, status\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, 'discovered'\n)\nON CONFLICT (source, job_id) DO UPDATE SET\n  last_seen_at = NOW(),\n  status = CASE\n    WHEN jobs.description_sha256 <> EXCLUDED.description_sha256 THEN 'discovered'\n    ELSE jobs.status\n  END,\n  job_description = EXCLUDED.job_description,\n  description_sha256 = EXCLUDED.description_sha256,\n  updated_at = NOW()\nRETURNING id, job_id, title, company, status;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.job_id,\n  $json.source,\n  $json.title,\n  $json.company,\n  $json.location,\n  $json.work_mode,\n  $json.employment_type,\n  $json.experience_required,\n  JSON.stringify($json.required_skills || []),\n  JSON.stringify($json.preferred_skills || []),\n  $json.job_description,\n  $json.description_sha256,\n  $json.salary_range,\n  $json.posted_at,\n  $json.application_url,\n  $json.canonical_url,\n  $json.fallback_dedup_hash\n] }}"
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000009",
+      "name": "Postgres: Upsert Normalized Jobs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1960, 300],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE workflow_runs\nSET status = 'completed',\n    finished_at = NOW(),\n    metrics_json = $2::jsonb\nWHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$('Postgres: Start Workflow Run').first().json.run_id, JSON.stringify({ upserted_jobs: $input.all().length })] }}"
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000010",
+      "name": "Postgres: Complete Workflow Run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2220, 300],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger: Daily 07:00 UTC": {
+      "main": [[{ "node": "Postgres: Load Active User & Schedule Gate", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Load Active User & Schedule Gate": {
+      "main": [[{ "node": "Postgres: Start Workflow Run", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Start Workflow Run": {
+      "main": [[{ "node": "Postgres: Load Enabled Job Sources", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Load Enabled Job Sources": {
+      "main": [
+        [
+          { "node": "Execute Subworkflow: Greenhouse Source", "type": "main", "index": 0 },
+          { "node": "Execute Subworkflow: Lever Source", "type": "main", "index": 0 },
+          { "node": "Execute Subworkflow: Web Scrape (/scrape) & Portal Search", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Execute Subworkflow: Greenhouse Source": {
+      "main": [[{ "node": "Merge: Combine Source Listings", "type": "main", "index": 0 }]]
+    },
+    "Execute Subworkflow: Lever Source": {
+      "main": [[{ "node": "Merge: Combine Source Listings", "type": "main", "index": 1 }]]
+    },
+    "Execute Subworkflow: Web Scrape (/scrape) & Portal Search": {
+      "main": [[{ "node": "Merge: Combine Source Listings", "type": "main", "index": 2 }]]
+    },
+    "Merge: Combine Source Listings": {
+      "main": [[{ "node": "Code: Filter & 3-Tier Deduplicate Jobs", "type": "main", "index": 0 }]]
+    },
+    "Code: Filter & 3-Tier Deduplicate Jobs": {
+      "main": [[{ "node": "Postgres: Upsert Normalized Jobs", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Upsert Normalized Jobs": {
+      "main": [[{ "node": "Postgres: Complete Workflow Run", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "workflow-f-monitoring-error-recovery"
+  }
+}

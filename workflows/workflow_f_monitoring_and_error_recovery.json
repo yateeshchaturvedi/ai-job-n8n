@@ -1,0 +1,77 @@
+{
+  "name": "Workflow F: Monitoring and Error Recovery",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f1000000-0000-4000-8000-000000000001",
+      "name": "Error Trigger: Capture Failed Execution",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [220, 260]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_runs (n8n_execution_id, workflow_name, status, error_summary, finished_at)\nVALUES ($1, $2, 'failed', $3, NOW())\nRETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.execution?.id || 'unknown',\n  $json.workflow?.name || 'Unknown Workflow',\n  ($json.execution?.error?.message || 'Unhandled workflow error') + ' (Node: ' + ($json.execution?.lastNodeExecuted || 'N/A') + ')'\n] }}"
+        }
+      },
+      "id": "f1000000-0000-4000-8000-000000000002",
+      "name": "Postgres: Log Failed Execution Run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [500, 260],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_events (workflow_name, n8n_execution_id, event_type, entity_type, details_json)\nVALUES ($1, $2, 'WORKFLOW_EXECUTION_FAILED', 'workflow_runs', $3::jsonb)\nRETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Error Trigger: Capture Failed Execution').item.json.workflow?.name || 'Unknown',\n  $('Error Trigger: Capture Failed Execution').item.json.execution?.id || 'unknown',\n  JSON.stringify({\n    failed_node: $('Error Trigger: Capture Failed Execution').item.json.execution?.lastNodeExecuted,\n    error_message: $('Error Trigger: Capture Failed Execution').item.json.execution?.error?.message\n  })\n] }}"
+        }
+      },
+      "id": "f1000000-0000-4000-8000-000000000003",
+      "name": "Postgres: Record Failure Audit Event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [780, 260],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM || 'AI Job Search Monitor <noreply@example.com>' }}",
+        "toEmail": "={{ $env.ADMIN_ALERT_EMAIL || 'admin@example.com' }}",
+        "subject": "={{ '[ALERT] n8n Workflow Failed: ' + ($('Error Trigger: Capture Failed Execution').item.json.workflow?.name || 'Job Automation') }}",
+        "html": "={{ '<h3>n8n Workflow Failure Alert</h3><p><strong>Workflow:</strong> ' + ($('Error Trigger: Capture Failed Execution').item.json.workflow?.name || '') + '</p><p><strong>Execution ID:</strong> ' + ($('Error Trigger: Capture Failed Execution').item.json.execution?.id || '') + '</p><p><strong>Failed Node:</strong> ' + ($('Error Trigger: Capture Failed Execution').item.json.execution?.lastNodeExecuted || '') + '</p><p><strong>Error:</strong> ' + ($('Error Trigger: Capture Failed Execution').item.json.execution?.error?.message || '') + '</p>' }}",
+        "options": {}
+      },
+      "id": "f1000000-0000-4000-8000-000000000004",
+      "name": "Send Email: Alert Administrator",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1060, 260],
+      "credentials": {
+        "smtp": { "id": "smtp-credentials", "name": "SMTP Email Account" }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Error Trigger: Capture Failed Execution": {
+      "main": [[{ "node": "Postgres: Log Failed Execution Run", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Log Failed Execution Run": {
+      "main": [[{ "node": "Postgres: Record Failure Audit Event", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Record Failure Audit Event": {
+      "main": [[{ "node": "Send Email: Alert Administrator", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,64 @@
+{
+  "name": "Subworkflow: Greenhouse Job Discovery",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b1100000-0000-4000-8000-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [220, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst boards = Array.isArray(input.board_tokens) && input.board_tokens.length > 0\n  ? input.board_tokens\n  : ['hashicorp', 'datadog', 'cloudflare', 'gitlab'];\n\nreturn boards.map(token => ({\n  json: {\n    board_token: token,\n    api_url: `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(token)}/jobs?content=true`,\n    user_preferences: input.user_preferences || {}\n  }\n}));"
+      },
+      "id": "b1100000-0000-4000-8000-000000000002",
+      "name": "Code: Expand Greenhouse Board Tokens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 260]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.api_url }}",
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "b1100000-0000-4000-8000-000000000003",
+      "name": "HTTP Request: Fetch Greenhouse Board",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 260],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst results = [];\n\nfor (const item of $input.all()) {\n  const payload = item.json;\n  if (!payload || !Array.isArray(payload.jobs)) continue;\n  const companyName = payload.board_token || 'Greenhouse Company';\n\n  for (const job of payload.jobs) {\n    const title = String(job.title || '').trim();\n    const locationName = String(job.location?.name || 'Unspecified').trim();\n    const rawHtml = String(job.content || '');\n    const cleanDesc = rawHtml\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>')\n      .replace(/&amp;/g, '&')\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n\n    const lowerLoc = (locationName + ' ' + cleanDesc.slice(0, 300)).toLowerCase();\n    let workMode = 'unspecified';\n    if (lowerLoc.includes('remote')) workMode = 'remote';\n    else if (lowerLoc.includes('hybrid')) workMode = 'hybrid';\n    else workMode = 'onsite';\n\n    const appUrl = String(job.absolute_url || '').trim();\n    const canonicalUrl = appUrl.split('?')[0].replace(/\\/+$/, '');\n    const fallbackHash = crypto\n      .createHash('sha256')\n      .update(`${companyName.toLowerCase()}|${title.toLowerCase()}|${locationName.toLowerCase()}`)\n      .digest('hex');\n    const descHash = crypto.createHash('sha256').update(cleanDesc).digest('hex');\n\n    results.push({\n      json: {\n        job_id: `gh_${job.id}`,\n        source: 'greenhouse',\n        title,\n        company: companyName.charAt(0).toUpperCase() + companyName.slice(1),\n        location: locationName,\n        work_mode: workMode,\n        employment_type: 'full-time',\n        experience_required: null,\n        required_skills: [],\n        preferred_skills: [],\n        job_description: cleanDesc,\n        description_sha256: descHash,\n        salary_range: null,\n        posted_at: job.updated_at || new Date().toISOString(),\n        application_url: appUrl,\n        canonical_url: canonicalUrl,\n        fallback_dedup_hash: fallbackHash,\n        status: 'discovered'\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "b1100000-0000-4000-8000-000000000004",
+      "name": "Code: Normalize Greenhouse Jobs to Common Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 260]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Code: Expand Greenhouse Board Tokens", "type": "main", "index": 0 }]]
+    },
+    "Code: Expand Greenhouse Board Tokens": {
+      "main": [[{ "node": "HTTP Request: Fetch Greenhouse Board", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request: Fetch Greenhouse Board": {
+      "main": [[{ "node": "Code: Normalize Greenhouse Jobs to Common Schema", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

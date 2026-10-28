@@ -1,0 +1,18 @@
+{
+  "name": "job-auto-docx-service",
+  "version": "1.0.0",
+  "description": "ATS-friendly DOCX & PDF resume builder, parser, QA claim verifier, and signed URL server for n8n Job Automation",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test src/core.test.js"
+  },
+  "dependencies": {
+    "docx": "^9.1.0",
+    "express": "^4.21.2",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1",
+    "pdfkit": "^0.15.1"
+  }
+}

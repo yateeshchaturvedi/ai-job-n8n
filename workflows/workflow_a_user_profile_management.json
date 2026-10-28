@@ -1,0 +1,193 @@
+{
+  "name": "Workflow A: User Profile Management",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "user-profile",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Webhook: Update User Profile",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 220],
+      "webhookId": "user-profile-webhook"
+    },
+    {
+      "parameters": {
+        "formTitle": "AI Job Search & Resume Tailoring Profile",
+        "formDescription": "Configure your target roles, skills, locations, match threshold, and resume source without rebuilding the workflow.",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "Email Address", "fieldType": "email", "requiredField": true },
+            { "fieldLabel": "Full Name", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Target Job Titles (comma-separated)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Years of Experience", "fieldType": "number", "requiredField": true },
+            { "fieldLabel": "Technical Skills (comma-separated)", "fieldType": "textarea", "requiredField": true },
+            { "fieldLabel": "Preferred Locations (comma-separated)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Work Authorization", "fieldType": "text", "requiredField": false },
+            { "fieldLabel": "Employment Types (full-time, contract, internship)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Salary Min", "fieldType": "number", "requiredField": false },
+            { "fieldLabel": "Salary Max", "fieldType": "number", "requiredField": false },
+            { "fieldLabel": "Salary Currency", "fieldType": "text", "requiredField": false },
+            { "fieldLabel": "Seniority (junior, mid-level, senior, lead)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Preferred Companies (comma-separated)", "fieldType": "text", "requiredField": false },
+            { "fieldLabel": "Excluded Companies (comma-separated)", "fieldType": "text", "requiredField": false },
+            { "fieldLabel": "Notice Period", "fieldType": "text", "requiredField": false },
+            { "fieldLabel": "Resume Output Format (docx, pdf, both)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Notification Method (email, slack, telegram)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Search Frequency (daily, weekdays, weekly)", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Maximum Jobs Per Run", "fieldType": "number", "requiredField": true },
+            { "fieldLabel": "Minimum Match Score (default 70)", "fieldType": "number", "requiredField": true }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Form Trigger: Job Profile",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [240, 420],
+      "webhookId": "user-profile-form"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.body || $input.first().json;\n\nconst parseList = (val, fallback = []) => {\n  if (Array.isArray(val)) return val.map(String).map(s => s.trim()).filter(Boolean);\n  if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);\n  return fallback;\n};\n\nconst email = String(raw.email || raw['Email Address'] || '').trim().toLowerCase();\nconst fullName = String(raw.full_name || raw['Full Name'] || '').trim();\nconst targetTitles = parseList(raw.target_job_titles || raw['Target Job Titles (comma-separated)']);\nconst skills = parseList(raw.technical_skills || raw['Technical Skills (comma-separated)']);\nconst locations = parseList(raw.preferred_locations || raw['Preferred Locations (comma-separated)'], ['Remote']);\n\nconst errors = [];\nif (!email || !email.includes('@')) errors.push('Valid email is required');\nif (!fullName) errors.push('Full name is required');\nif (targetTitles.length === 0) errors.push('At least one target job title is required');\nif (skills.length === 0) errors.push('At least one technical skill is required');\n\nconst minScore = Number(raw.min_match_score ?? raw['Minimum Match Score (default 70)'] ?? 70);\nconst maxJobs = Number(raw.max_jobs_per_run ?? raw['Maximum Jobs Per Run'] ?? 15);\n\nreturn [{\n  json: {\n    is_valid: errors.length === 0,\n    validation_errors: errors,\n    email,\n    full_name: fullName,\n    phone: raw.phone || null,\n    schedule_enabled: raw.schedule_enabled !== undefined ? Boolean(raw.schedule_enabled) : true,\n    target_job_titles: targetTitles,\n    years_of_experience: Number(raw.years_of_experience ?? raw['Years of Experience'] ?? 5),\n    technical_skills: skills,\n    preferred_locations: locations,\n    work_modes: parseList(raw.work_modes, ['remote', 'hybrid']),\n    work_authorization: raw.work_authorization || raw['Work Authorization'] || null,\n    employment_types: parseList(raw.employment_types || raw['Employment Types (full-time, contract, internship)'], ['full-time']),\n    salary_min: raw.salary_min ? Number(raw.salary_min) : null,\n    salary_max: raw.salary_max ? Number(raw.salary_max) : null,\n    salary_currency: raw.salary_currency || raw['Salary Currency'] || 'USD',\n    seniority_levels: parseList(raw.seniority || raw.seniority_levels || raw['Seniority (junior, mid-level, senior, lead)'], ['senior']),\n    preferred_companies: parseList(raw.preferred_companies || raw['Preferred Companies (comma-separated)'], []),\n    excluded_companies: parseList(raw.excluded_companies || raw['Excluded Companies (comma-separated)'], []),\n    notice_period: raw.notice_period || raw['Notice Period'] || '2 weeks',\n    resume_output_format: String(raw.resume_output_format || raw['Resume Output Format (docx, pdf, both)'] || 'both').toLowerCase(),\n    notification_method: String(raw.notification_method || raw['Notification Method (email, slack, telegram)'] || 'email').toLowerCase(),\n    notification_target: raw.notification_target || email,\n    search_frequency: String(raw.search_frequency || raw['Search Frequency (daily, weekdays, weekly)'] || 'daily').toLowerCase(),\n    max_jobs_per_run: Math.min(Math.max(maxJobs, 1), 100),\n    min_match_score: Math.min(Math.max(minScore, 0), 100),\n    structured_resume: raw.structured_resume || null,\n    resume_base64: raw.resume_base64 || null,\n    resume_filename: raw.resume_filename || 'Uploaded_Master_Resume.docx'\n  }\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Code: Normalize & Validate Profile Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "valid-check",
+              "leftValue": "={{ $json.is_valid }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "IF: Profile Input Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [760, 320]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO users (email, full_name, phone, schedule_enabled)\nVALUES ($1, $2, $3, $4)\nON CONFLICT (email) DO UPDATE SET\n  full_name = EXCLUDED.full_name,\n  phone = COALESCE(EXCLUDED.phone, users.phone),\n  schedule_enabled = EXCLUDED.schedule_enabled,\n  updated_at = NOW()\nRETURNING id, email, full_name, schedule_enabled;",
+        "options": {
+          "queryReplacement": "={{ [$json.email, $json.full_name, $json.phone, $json.schedule_enabled] }}"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Postgres: Upsert User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1020, 220],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO user_preferences (\n  user_id, target_job_titles, years_of_experience, technical_skills,\n  preferred_locations, work_modes, work_authorization, employment_types,\n  salary_min, salary_max, salary_currency, seniority_levels,\n  preferred_companies, excluded_companies, notice_period,\n  resume_output_format, notification_method, notification_target,\n  search_frequency, max_jobs_per_run, min_match_score\n) VALUES (\n  $1, $2::jsonb, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, $8::jsonb,\n  $9, $10, $11, $12::jsonb, $13::jsonb, $14::jsonb, $15,\n  $16, $17, $18, $19, $20, $21\n)\nON CONFLICT (user_id) DO UPDATE SET\n  target_job_titles = EXCLUDED.target_job_titles,\n  years_of_experience = EXCLUDED.years_of_experience,\n  technical_skills = EXCLUDED.technical_skills,\n  preferred_locations = EXCLUDED.preferred_locations,\n  work_modes = EXCLUDED.work_modes,\n  work_authorization = EXCLUDED.work_authorization,\n  employment_types = EXCLUDED.employment_types,\n  salary_min = EXCLUDED.salary_min,\n  salary_max = EXCLUDED.salary_max,\n  salary_currency = EXCLUDED.salary_currency,\n  seniority_levels = EXCLUDED.seniority_levels,\n  preferred_companies = EXCLUDED.preferred_companies,\n  excluded_companies = EXCLUDED.excluded_companies,\n  notice_period = EXCLUDED.notice_period,\n  resume_output_format = EXCLUDED.resume_output_format,\n  notification_method = EXCLUDED.notification_method,\n  notification_target = EXCLUDED.notification_target,\n  search_frequency = EXCLUDED.search_frequency,\n  max_jobs_per_run = EXCLUDED.max_jobs_per_run,\n  min_match_score = EXCLUDED.min_match_score,\n  updated_at = NOW()\nRETURNING id, user_id, min_match_score, max_jobs_per_run, search_frequency;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.id,\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.target_job_titles),\n  $('Code: Normalize & Validate Profile Input').item.json.years_of_experience,\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.technical_skills),\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.preferred_locations),\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.work_modes),\n  $('Code: Normalize & Validate Profile Input').item.json.work_authorization,\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.employment_types),\n  $('Code: Normalize & Validate Profile Input').item.json.salary_min,\n  $('Code: Normalize & Validate Profile Input').item.json.salary_max,\n  $('Code: Normalize & Validate Profile Input').item.json.salary_currency,\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.seniority_levels),\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.preferred_companies),\n  JSON.stringify($('Code: Normalize & Validate Profile Input').item.json.excluded_companies),\n  $('Code: Normalize & Validate Profile Input').item.json.notice_period,\n  $('Code: Normalize & Validate Profile Input').item.json.resume_output_format,\n  $('Code: Normalize & Validate Profile Input').item.json.notification_method,\n  $('Code: Normalize & Validate Profile Input').item.json.notification_target,\n  $('Code: Normalize & Validate Profile Input').item.json.search_frequency,\n  $('Code: Normalize & Validate Profile Input').item.json.max_jobs_per_run,\n  $('Code: Normalize & Validate Profile Input').item.json.min_match_score\n] }}"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Postgres: Upsert User Preferences",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1260, 220],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_events (user_id, workflow_name, n8n_execution_id, event_type, entity_type, entity_id, details_json)\nVALUES ($1, 'Workflow A: User Profile Management', $2, 'USER_PROFILE_UPDATED', 'user_preferences', $3, $4::jsonb)\nRETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $execution.id, $json.id, JSON.stringify({ min_match_score: $json.min_match_score, search_frequency: $json.search_frequency })] }}"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Postgres: Record Profile Audit Event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1500, 220],
+      "credentials": {
+        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'success', message: 'User job profile and preferences saved.', user_id: $('Postgres: Upsert User Preferences').item.json.user_id, min_match_score: $('Postgres: Upsert User Preferences').item.json.min_match_score }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Respond to Webhook: Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1740, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', errors: $json.validation_errors }) }}",
+        "options": { "responseCode": 400 }
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Respond to Webhook: Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1020, 440]
+    }
+  ],
+  "connections": {
+    "Webhook: Update User Profile": {
+      "main": [[{ "node": "Code: Normalize & Validate Profile Input", "type": "main", "index": 0 }]]
+    },
+    "Form Trigger: Job Profile": {
+      "main": [[{ "node": "Code: Normalize & Validate Profile Input", "type": "main", "index": 0 }]]
+    },
+    "Code: Normalize & Validate Profile Input": {
+      "main": [[{ "node": "IF: Profile Input Valid?", "type": "main", "index": 0 }]]
+    },
+    "IF: Profile Input Valid?": {
+      "main": [
+        [{ "node": "Postgres: Upsert User", "type": "main", "index": 0 }],
+        [{ "node": "Respond to Webhook: Validation Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Postgres: Upsert User": {
+      "main": [[{ "node": "Postgres: Upsert User Preferences", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Upsert User Preferences": {
+      "main": [[{ "node": "Postgres: Record Profile Audit Event", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Record Profile Audit Event": {
+      "main": [[{ "node": "Respond to Webhook: Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "workflow-f-monitoring-error-recovery"
+  }
+}

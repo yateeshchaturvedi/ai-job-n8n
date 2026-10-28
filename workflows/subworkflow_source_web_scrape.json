@@ -1,0 +1,146 @@
+{
+  "name": "Subworkflow: Web Scrape & Career Portal Discovery (/scrape)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b1300000-0000-4000-8000-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [220, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst targetUrls = Array.isArray(input.board_tokens) && input.board_tokens.length > 0\n  ? input.board_tokens\n  : [\n      'https://remotive.com/api/remote-jobs?category=devops',\n      'https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss'\n    ];\n\nconst queries = Array.isArray(input.user_preferences?.target_job_titles) && input.user_preferences.target_job_titles.length > 0\n  ? input.user_preferences.target_job_titles\n  : ['DevOps Engineer', 'Platform Engineer'];\n\nreturn targetUrls.map(url => ({\n  json: {\n    target_url: url,\n    search_queries: queries,\n    scrape_endpoint: ($env.DOCX_SERVICE_URL || 'http://docx-service:3001') + '/scrape',\n    jsearch_enabled: Boolean($env.JSEARCH_RAPIDAPI_KEY)\n  }\n}));"
+      },
+      "id": "b1300000-0000-4000-8000-000000000002",
+      "name": "Code: Prepare Career Portal URLs & Search Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.scrape_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.DOCX_SERVICE_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  url: $json.target_url,\n  company_name: 'Career Portal',\n  firecrawl_api_key: $env.FIRECRAWL_API_KEY || ''\n}) }}",
+        "options": {
+          "timeout": 25000,
+          "retry": {
+            "maxTries": 2,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "b1300000-0000-4000-8000-000000000003",
+      "name": "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 180],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsearch.p.rapidapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ ($json.search_queries?.[0] || 'DevOps Engineer') + ' Remote' }}"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            },
+            {
+              "name": "num_pages",
+              "value": "1"
+            },
+            {
+              "name": "date_posted",
+              "value": "week"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-RapidAPI-Key",
+              "value": "={{ $env.JSEARCH_RAPIDAPI_KEY || '' }}"
+            },
+            {
+              "name": "X-RapidAPI-Host",
+              "value": "={{ $env.JSEARCH_RAPIDAPI_HOST || 'jsearch.p.rapidapi.com' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "b1300000-0000-4000-8000-000000000004",
+      "name": "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 380],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "b1300000-0000-4000-8000-000000000005",
+      "name": "Merge: Combine /scrape & Multi-Portal Search Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1040, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst normalized = [];\n\nfor (const item of $input.all()) {\n  const payload = item.json;\n  if (!payload) continue;\n\n  // 1. Handle jobs returned directly by POST /scrape\n  if (Array.isArray(payload.jobs)) {\n    for (const j of payload.jobs) {\n      if (j && j.job_id && j.title) {\n        normalized.push({ json: j });\n      }\n    }\n  }\n\n  // 2. Handle jobs returned by JSearch (LinkedIn / Indeed / Glassdoor / Naukri aggregator)\n  if (Array.isArray(payload.data)) {\n    for (const post of payload.data) {\n      if (!post.job_id || !post.job_title) continue;\n      const title = String(post.job_title).trim();\n      const company = String(post.employer_name || 'Portal Employer').trim();\n      const location = [post.job_city, post.job_state, post.job_country].filter(Boolean).join(', ') || 'Remote';\n      const workMode = post.job_is_remote ? 'remote' : 'onsite';\n      const desc = String(post.job_description || '').trim();\n      const appUrl = String(post.job_apply_link || post.job_google_link || '').trim();\n      const canonicalUrl = appUrl.split('?')[0].replace(/\\/+$/, '');\n      const fallbackHash = crypto\n        .createHash('sha256')\n        .update(`${company.toLowerCase()}|${title.toLowerCase()}|${location.toLowerCase()}`)\n        .digest('hex');\n      const descHash = crypto.createHash('sha256').update(desc).digest('hex');\n\n      normalized.push({\n        json: {\n          job_id: `portal_${post.job_id}`,\n          source: String(post.job_publisher || 'portal_search').toLowerCase().replace(/[^a-z0-9_]/g, '_'),\n          title,\n          company,\n          location,\n          work_mode: workMode,\n          employment_type: String(post.job_employment_type || 'full-time').toLowerCase(),\n          experience_required: null,\n          required_skills: [],\n          preferred_skills: [],\n          job_description: desc,\n          description_sha256: descHash,\n          salary_range: post.job_min_salary ? `${post.job_min_salary}-${post.job_max_salary} ${post.job_salary_currency || 'USD'}` : null,\n          posted_at: post.job_posted_at_datetime_utc || new Date().toISOString(),\n          application_url: appUrl,\n          canonical_url: canonicalUrl,\n          fallback_dedup_hash: fallbackHash,\n          status: 'discovered'\n        }\n      });\n    }\n  }\n}\n\nreturn normalized;"
+      },
+      "id": "b1300000-0000-4000-8000-000000000006",
+      "name": "Code: Normalize Scraped & Portal Jobs to Common Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 260]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Code: Prepare Career Portal URLs & Search Queries", "type": "main", "index": 0 }]]
+    },
+    "Code: Prepare Career Portal URLs & Search Queries": {
+      "main": [
+        [
+          { "node": "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)", "type": "main", "index": 0 },
+          { "node": "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)": {
+      "main": [[{ "node": "Merge: Combine /scrape & Multi-Portal Search Results", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)": {
+      "main": [[{ "node": "Merge: Combine /scrape & Multi-Portal Search Results", "type": "main", "index": 1 }]]
+    },
+    "Merge: Combine /scrape & Multi-Portal Search Results": {
+      "main": [[{ "node": "Code: Normalize Scraped & Portal Jobs to Common Schema", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

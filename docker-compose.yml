@@ -1,0 +1,108 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: job_auto_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n8n_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_postgres_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-job_automation_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n_admin} -d ${POSTGRES_DB:-job_automation_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - job_automation_net
+
+  docx-service:
+    build:
+      context: ./docx-service
+      dockerfile: Dockerfile
+    container_name: job_auto_docx_service
+    restart: unless-stopped
+    environment:
+      PORT: ${DOCX_SERVICE_PORT:-3001}
+      API_KEY: ${DOCX_SERVICE_API_KEY:-change_me_internal_docx_service_token}
+      STORAGE_DIR: ${DOCX_STORAGE_DIR:-/data/resumes}
+      URL_SIGNING_SECRET: ${DOCX_URL_SIGNING_SECRET:-change_me_hmac_signing_secret_for_expiring_links}
+      LINK_EXPIRY_SECONDS: ${DOCX_LINK_EXPIRY_SECONDS:-86400}
+      PUBLIC_BASE_URL: ${PUBLIC_DOCX_BASE_URL:-http://localhost:3001}
+    ports:
+      - "${DOCX_SERVICE_PORT:-3001}:3001"
+    volumes:
+      - resume_storage:/data/resumes
+      - ./test-data:/data/test-data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - job_automation_net
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:1.82.0
+    container_name: job_auto_n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      docx-service:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-job_automation_db}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-n8n_admin}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change_me_postgres_secret_password}
+      DB_POSTGRESDB_SCHEMA: n8n_internal
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678/}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change_me_32_byte_random_hex_encryption_key_here}
+      N8N_DEFAULT_BINARY_DATA_MODE: ${N8N_DEFAULT_BINARY_DATA_MODE:-filesystem}
+      EXECUTIONS_DATA_PRUNE: ${EXECUTIONS_DATA_PRUNE:-true}
+      EXECUTIONS_DATA_MAX_AGE: ${EXECUTIONS_DATA_MAX_AGE:-336}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      DOCX_SERVICE_URL: http://docx-service:3001
+      DOCX_SERVICE_API_KEY: ${DOCX_SERVICE_API_KEY:-change_me_internal_docx_service_token}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      FIRECRAWL_BASE_URL: ${FIRECRAWL_BASE_URL:-https://api.firecrawl.dev/v1}
+      JSEARCH_RAPIDAPI_KEY: ${JSEARCH_RAPIDAPI_KEY:-}
+      JSEARCH_RAPIDAPI_HOST: ${JSEARCH_RAPIDAPI_HOST:-jsearch.p.rapidapi.com}
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}
+      ADZUNA_API_KEY: ${ADZUNA_API_KEY:-}
+      LLM_MODEL_MATCHING: ${LLM_MODEL_MATCHING:-gpt-4o-mini}
+      LLM_MODEL_TAILORING: ${LLM_MODEL_TAILORING:-gpt-4o}
+      LLM_MODEL_QA: ${LLM_MODEL_QA:-gpt-4o-mini}
+      ADMIN_ALERT_EMAIL: ${ADMIN_ALERT_EMAIL:-admin@example.com}
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - resume_storage:/data/resumes
+      - ./workflows:/home/node/workflows:ro
+      - ./prompts:/home/node/prompts:ro
+    networks:
+      - job_automation_net
+
+volumes:
+  postgres_data:
+  n8n_data:
+  resume_storage:
+
+networks:
+  job_automation_net:
+    driver: bridge

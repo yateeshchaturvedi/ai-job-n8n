@@ -1,0 +1,108 @@
+{
+  "basics": {
+    "name": "Alex Mercer",
+    "title": "Senior DevOps & Platform Engineer",
+    "email": "alex.mercer.devops@example.com",
+    "phone": "+1-415-555-0192",
+    "location": "Seattle, WA (Open to Remote)",
+    "linkedin": "https://linkedin.com/in/alexmercer-devops",
+    "github": "https://github.com/alexmercer-infra"
+  },
+  "summary": "Platform and DevOps Engineer with 6.5 years of experience designing, automating, and operating resilient cloud infrastructure across AWS and Azure. Proven track record in Kubernetes cluster lifecycle management, modular Terraform Infrastructure-as-Code, GitOps delivery with ArgoCD and GitHub Actions, and full-stack observability using Prometheus and Grafana.",
+  "skills": {
+    "Cloud Platforms": [
+      "AWS (EKS, EC2, RDS, IAM, VPC, S3, CloudFront)",
+      "Microsoft Azure (AKS, Azure DevOps, VNet, KeyVault)"
+    ],
+    "Containers & Orchestration": [
+      "Kubernetes",
+      "Docker",
+      "Helm",
+      "ArgoCD",
+      "Istio"
+    ],
+    "Infrastructure as Code": [
+      "Terraform",
+      "Terragrunt",
+      "Ansible",
+      "CloudFormation"
+    ],
+    "CI/CD & Automation": [
+      "GitHub Actions",
+      "Jenkins",
+      "Azure Pipelines",
+      "SonarQube"
+    ],
+    "Observability & Security": [
+      "Prometheus",
+      "Grafana",
+      "OpenTelemetry",
+      "ELK Stack",
+      "HashiCorp Vault",
+      "Trivy"
+    ],
+    "Languages & Databases": [
+      "Python",
+      "Bash",
+      "Go (basic)",
+      "PostgreSQL",
+      "Redis"
+    ]
+  },
+  "experience": [
+    {
+      "company": "CloudScale Systems",
+      "role": "Senior Platform Engineer",
+      "location": "Seattle, WA (Remote)",
+      "start_date": "2022-03",
+      "end_date": "Present",
+      "bullets": [
+        "Architected and maintained multi-region AWS EKS and Azure AKS production clusters hosting 140+ microservices with 99.98% uptime SLA.",
+        "Standardized Infrastructure-as-Code across 18 engineering squads by authoring versioned Terraform and Terragrunt modules, reducing environment provisioning time from 4 days to 22 minutes.",
+        "Migrated 95 legacy Jenkins pipelines to reusable GitHub Actions workflows and ArgoCD GitOps deployments, cutting mean deployment lead time by 58%.",
+        "Implemented centralized Prometheus, Grafana, and OpenTelemetry observability stacks, decreasing Mean Time to Detection (MTTD) for P1 incidents from 19 minutes to 4 minutes.",
+        "Partnered with FinOps to right-size Kubernetes node groups and adopt Karpenter spot autoscaling, saving $210,000 in annual cloud compute spend."
+      ]
+    },
+    {
+      "company": "FinTech Pulse",
+      "role": "DevOps Engineer",
+      "location": "San Francisco, CA",
+      "start_date": "2019-07",
+      "end_date": "2022-02",
+      "bullets": [
+        "Automated AWS VPC, RDS PostgreSQL, and ECS/EKS infrastructure provisioning using Terraform and Ansible across dev, staging, and PCI-DSS compliant production environments.",
+        "Built automated container vulnerability scanning gates in Jenkins and GitHub Actions using Trivy and HashiCorp Vault dynamic secrets.",
+        "Managed high-availability PostgreSQL database replicas, automated snapshot verification, and disaster recovery runbooks achieving an RPO of <5 minutes.",
+        "Developed Python and Bash CLI tooling for developer self-service log retrieval and ephemeral preview environments, reducing DevOps ticket volume by 40%."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "KubeGuard Drift Detector",
+      "description": "Internal Python service comparing live Kubernetes cluster manifests against Git repositories and alerting Slack on unauthorized manual kubectl edits.",
+      "technologies": ["Python", "Kubernetes API", "ArgoCD", "Slack Webhooks"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Washington",
+      "degree": "B.S. in Computer Science",
+      "graduation_year": "2019",
+      "location": "Seattle, WA"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Certified Kubernetes Administrator (CKA)",
+      "issuer": "Cloud Native Computing Foundation (CNCF)",
+      "year": "2023"
+    },
+    {
+      "name": "AWS Certified Solutions Architect – Associate",
+      "issuer": "Amazon Web Services",
+      "year": "2022"
+    }
+  ]
+}

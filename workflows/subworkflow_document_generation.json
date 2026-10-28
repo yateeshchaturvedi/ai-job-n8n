@@ -1,0 +1,96 @@
+{
+  "name": "Subworkflow: Document Generation & File QA",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1100000-0000-4000-8000-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [220, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.DOCX_SERVICE_URL || 'http://docx-service:3001') + '/generate-resume' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.DOCX_SERVICE_API_KEY || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  source_resume: $json.source_resume,\n  tailored_resume: $json.tailored_resume,\n  company: $json.company,\n  job_title: $json.title,\n  date_str: new Date().toISOString().slice(0, 10),\n  output_format: $json.resume_output_format || 'both'\n}) }}",
+        "options": {
+          "timeout": 25000
+        }
+      },
+      "id": "d1100000-0000-4000-8000-000000000002",
+      "name": "HTTP Request: Generate & Validate DOCX/PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 260]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "verify-parseable",
+              "leftValue": "={{ $json.file_validation?.docx_parseable_and_readable }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d1100000-0000-4000-8000-000000000003",
+      "name": "IF: Output Files Validated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [740, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const gen = $input.first().json;\nconst triggerData = $('Execute Workflow Trigger').first().json;\nreturn [{\n  json: {\n    ...triggerData,\n    generation_result: gen,\n    qa_status: 'passed'\n  }\n}];"
+      },
+      "id": "d1100000-0000-4000-8000-000000000004",
+      "name": "Code: Format Verified Document Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const gen = $input.first().json;\nconst triggerData = $('Execute Workflow Trigger').first().json;\nreturn [{\n  json: {\n    ...triggerData,\n    generation_result: gen,\n    qa_status: 'failed_manual_review'\n  }\n}];"
+      },
+      "id": "d1100000-0000-4000-8000-000000000005",
+      "name": "Code: Flag Document For Manual Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 360]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "HTTP Request: Generate & Validate DOCX/PDF", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request: Generate & Validate DOCX/PDF": {
+      "main": [[{ "node": "IF: Output Files Validated?", "type": "main", "index": 0 }]]
+    },
+    "IF: Output Files Validated?": {
+      "main": [
+        [{ "node": "Code: Format Verified Document Metadata", "type": "main", "index": 0 }],
+        [{ "node": "Code: Flag Document For Manual Review", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "AI Job Search & Resume Tailoring n8n Automation",
+  "description": "Production-ready n8n workflow suite, PostgreSQL schema, and DOCX/PDF resume generation microservice for automated job discovery, LLM match ranking, claim-verified resume tailoring, and digest delivery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
