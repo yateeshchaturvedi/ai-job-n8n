@@ -12,7 +12,10 @@
       "name": "Webhook: Update User Profile",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 220],
+      "position": [
+        240,
+        220
+      ],
       "webhookId": "user-profile-webhook"
     },
     {
@@ -21,26 +24,106 @@
         "formDescription": "Configure your target roles, skills, locations, match threshold, and resume source without rebuilding the workflow.",
         "formFields": {
           "values": [
-            { "fieldLabel": "Email Address", "fieldType": "email", "requiredField": true },
-            { "fieldLabel": "Full Name", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Target Job Titles (comma-separated)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Years of Experience", "fieldType": "number", "requiredField": true },
-            { "fieldLabel": "Technical Skills (comma-separated)", "fieldType": "textarea", "requiredField": true },
-            { "fieldLabel": "Preferred Locations (comma-separated)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Work Authorization", "fieldType": "text", "requiredField": false },
-            { "fieldLabel": "Employment Types (full-time, contract, internship)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Salary Min", "fieldType": "number", "requiredField": false },
-            { "fieldLabel": "Salary Max", "fieldType": "number", "requiredField": false },
-            { "fieldLabel": "Salary Currency", "fieldType": "text", "requiredField": false },
-            { "fieldLabel": "Seniority (junior, mid-level, senior, lead)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Preferred Companies (comma-separated)", "fieldType": "text", "requiredField": false },
-            { "fieldLabel": "Excluded Companies (comma-separated)", "fieldType": "text", "requiredField": false },
-            { "fieldLabel": "Notice Period", "fieldType": "text", "requiredField": false },
-            { "fieldLabel": "Resume Output Format (docx, pdf, both)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Notification Method (email, slack, telegram)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Search Frequency (daily, weekdays, weekly)", "fieldType": "text", "requiredField": true },
-            { "fieldLabel": "Maximum Jobs Per Run", "fieldType": "number", "requiredField": true },
-            { "fieldLabel": "Minimum Match Score (default 70)", "fieldType": "number", "requiredField": true }
+            {
+              "fieldLabel": "Email Address",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Full Name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Job Titles (comma-separated)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Years of Experience",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Technical Skills (comma-separated)",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Preferred Locations (comma-separated)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work Authorization",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Employment Types (full-time, contract, internship)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Salary Min",
+              "fieldType": "number",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Salary Max",
+              "fieldType": "number",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Salary Currency",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Seniority (junior, mid-level, senior, lead)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Preferred Companies (comma-separated)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Excluded Companies (comma-separated)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Notice Period",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Resume Output Format (docx, pdf, both)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notification Method (email, slack, telegram)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Search Frequency (daily, weekdays, weekly)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Maximum Jobs Per Run",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Minimum Match Score (default 70)",
+              "fieldType": "number",
+              "requiredField": true
+            }
           ]
         },
         "options": {}
@@ -49,7 +132,10 @@
       "name": "Form Trigger: Job Profile",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2.2,
-      "position": [240, 420],
+      "position": [
+        240,
+        420
+      ],
       "webhookId": "user-profile-form"
     },
     {
@@ -60,18 +146,29 @@
       "name": "Code: Normalize & Validate Profile Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [520, 320]
+      "position": [
+        520,
+        320
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
           "conditions": [
             {
               "id": "valid-check",
               "leftValue": "={{ $json.is_valid }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -82,7 +179,10 @@
       "name": "IF: Profile Input Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [760, 320]
+      "position": [
+        760,
+        320
+      ]
     },
     {
       "parameters": {
@@ -96,9 +196,15 @@
       "name": "Postgres: Upsert User",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1020, 220],
+      "position": [
+        1020,
+        220
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -113,9 +219,15 @@
       "name": "Postgres: Upsert User Preferences",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1260, 220],
+      "position": [
+        1260,
+        220
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -130,64 +242,144 @@
       "name": "Postgres: Record Profile Audit Event",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1500, 220],
+      "position": [
+        1500,
+        220
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify({ status: 'success', message: 'User job profile and preferences saved.', user_id: $('Postgres: Upsert User Preferences').item.json.user_id, min_match_score: $('Postgres: Upsert User Preferences').item.json.min_match_score }) }}",
-        "options": { "responseCode": 200 }
+        "options": {
+          "responseCode": 200
+        }
       },
       "id": "a1000000-0000-4000-8000-000000000008",
       "name": "Respond to Webhook: Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1740, 220]
+      "position": [
+        1740,
+        220
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify({ status: 'error', errors: $json.validation_errors }) }}",
-        "options": { "responseCode": 400 }
+        "options": {
+          "responseCode": 400
+        }
       },
       "id": "a1000000-0000-4000-8000-000000000009",
       "name": "Respond to Webhook: Validation Error",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1020, 440]
+      "position": [
+        1020,
+        440
+      ]
     }
   ],
   "connections": {
     "Webhook: Update User Profile": {
-      "main": [[{ "node": "Code: Normalize & Validate Profile Input", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Normalize & Validate Profile Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Form Trigger: Job Profile": {
-      "main": [[{ "node": "Code: Normalize & Validate Profile Input", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Normalize & Validate Profile Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code: Normalize & Validate Profile Input": {
-      "main": [[{ "node": "IF: Profile Input Valid?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "IF: Profile Input Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "IF: Profile Input Valid?": {
       "main": [
-        [{ "node": "Postgres: Upsert User", "type": "main", "index": 0 }],
-        [{ "node": "Respond to Webhook: Validation Error", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Postgres: Upsert User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook: Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Postgres: Upsert User": {
-      "main": [[{ "node": "Postgres: Upsert User Preferences", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Upsert User Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Upsert User Preferences": {
-      "main": [[{ "node": "Postgres: Record Profile Audit Event", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Record Profile Audit Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Record Profile Audit Event": {
-      "main": [[{ "node": "Respond to Webhook: Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook: Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "errorWorkflow": "workflow-f-monitoring-error-recovery"
-  }
+  },
+  "id": "workflow-a-user-profile-management",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-c22e6c89ad5e",
+  "tags": []
 }

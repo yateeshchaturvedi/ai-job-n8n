@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [220, 260]
+      "position": [
+        220,
+        260
+      ]
     },
     {
       "parameters": {
@@ -17,7 +20,10 @@
       "name": "Code: Expand Lever Board Tokens",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 260]
+      "position": [
+        460,
+        260
+      ]
     },
     {
       "parameters": {
@@ -35,7 +41,10 @@
       "name": "HTTP Request: Fetch Lever Postings",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [720, 260],
+      "position": [
+        720,
+        260
+      ],
       "continueOnFail": true
     },
     {
@@ -46,19 +55,52 @@
       "name": "Code: Normalize Lever Jobs to Common Schema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [980, 260]
+      "position": [
+        980,
+        260
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [[{ "node": "Code: Expand Lever Board Tokens", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Expand Lever Board Tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code: Expand Lever Board Tokens": {
-      "main": [[{ "node": "HTTP Request: Fetch Lever Postings", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Fetch Lever Postings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP Request: Fetch Lever Postings": {
-      "main": [[{ "node": "Code: Normalize Lever Jobs to Common Schema", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Normalize Lever Jobs to Common Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "subworkflow-source-lever",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-0781b4111cd7",
+  "tags": []
 }

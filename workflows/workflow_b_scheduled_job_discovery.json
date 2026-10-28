@@ -16,7 +16,10 @@
       "name": "Schedule Trigger: Daily 07:00 UTC",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,9 +31,15 @@
       "name": "Postgres: Load Active User & Schedule Gate",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 300],
+      "position": [
+        440,
+        300
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -45,9 +54,15 @@
       "name": "Postgres: Start Workflow Run",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -60,9 +75,15 @@
       "name": "Postgres: Load Enabled Job Sources",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [920, 300],
+      "position": [
+        920,
+        300
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -78,7 +99,10 @@
       "name": "Execute Subworkflow: Greenhouse Source",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1180, 140],
+      "position": [
+        1180,
+        140
+      ],
       "continueOnFail": true
     },
     {
@@ -94,7 +118,10 @@
       "name": "Execute Subworkflow: Lever Source",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1180, 300],
+      "position": [
+        1180,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -110,7 +137,10 @@
       "name": "Execute Subworkflow: Web Scrape (/scrape) & Portal Search",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1180, 460],
+      "position": [
+        1180,
+        460
+      ],
       "continueOnFail": true
     },
     {
@@ -122,7 +152,10 @@
       "name": "Merge: Combine Source Listings",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [1460, 300]
+      "position": [
+        1460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -132,7 +165,10 @@
       "name": "Code: Filter & 3-Tier Deduplicate Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1700, 300]
+      "position": [
+        1700,
+        300
+      ]
     },
     {
       "parameters": {
@@ -146,9 +182,15 @@
       "name": "Postgres: Upsert Normalized Jobs",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1960, 300],
+      "position": [
+        1960,
+        300
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -163,52 +205,146 @@
       "name": "Postgres: Complete Workflow Run",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [2220, 300],
+      "position": [
+        2220,
+        300
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     }
   ],
   "connections": {
     "Schedule Trigger: Daily 07:00 UTC": {
-      "main": [[{ "node": "Postgres: Load Active User & Schedule Gate", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Load Active User & Schedule Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Load Active User & Schedule Gate": {
-      "main": [[{ "node": "Postgres: Start Workflow Run", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Start Workflow Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Start Workflow Run": {
-      "main": [[{ "node": "Postgres: Load Enabled Job Sources", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Load Enabled Job Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Load Enabled Job Sources": {
       "main": [
         [
-          { "node": "Execute Subworkflow: Greenhouse Source", "type": "main", "index": 0 },
-          { "node": "Execute Subworkflow: Lever Source", "type": "main", "index": 0 },
-          { "node": "Execute Subworkflow: Web Scrape (/scrape) & Portal Search", "type": "main", "index": 0 }
+          {
+            "node": "Execute Subworkflow: Greenhouse Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute Subworkflow: Lever Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute Subworkflow: Web Scrape (/scrape) & Portal Search",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Execute Subworkflow: Greenhouse Source": {
-      "main": [[{ "node": "Merge: Combine Source Listings", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Merge: Combine Source Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Execute Subworkflow: Lever Source": {
-      "main": [[{ "node": "Merge: Combine Source Listings", "type": "main", "index": 1 }]]
+      "main": [
+        [
+          {
+            "node": "Merge: Combine Source Listings",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
     },
     "Execute Subworkflow: Web Scrape (/scrape) & Portal Search": {
-      "main": [[{ "node": "Merge: Combine Source Listings", "type": "main", "index": 2 }]]
+      "main": [
+        [
+          {
+            "node": "Merge: Combine Source Listings",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
     },
     "Merge: Combine Source Listings": {
-      "main": [[{ "node": "Code: Filter & 3-Tier Deduplicate Jobs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Filter & 3-Tier Deduplicate Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code: Filter & 3-Tier Deduplicate Jobs": {
-      "main": [[{ "node": "Postgres: Upsert Normalized Jobs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Upsert Normalized Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Upsert Normalized Jobs": {
-      "main": [[{ "node": "Postgres: Complete Workflow Run", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Complete Workflow Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "errorWorkflow": "workflow-f-monitoring-error-recovery"
-  }
+  },
+  "id": "workflow-b-scheduled-job-discovery",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-f653573a0773",
+  "tags": []
 }

@@ -20,7 +20,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - job_automation_net
+      job_automation_net:
+        aliases:
+          - postgres
+          - job_auto_postgres
 
   docx-service:
     build:
@@ -46,10 +49,13 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - job_automation_net
+      job_automation_net:
+        aliases:
+          - docx-service
+          - job_auto_docx_service
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n:1.82.0
+    image: docker.n8n.io/n8nio/n8n:latest
     container_name: job_auto_n8n
     restart: unless-stopped
     depends_on:
@@ -65,6 +71,7 @@ services:
       DB_POSTGRESDB_USER: ${POSTGRES_USER:-n8n_admin}
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change_me_postgres_secret_password}
       DB_POSTGRESDB_SCHEMA: n8n_internal
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
       N8N_PORT: 5678
       N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
       N8N_HOST: ${N8N_HOST:-localhost}
@@ -96,7 +103,10 @@ services:
       - ./workflows:/home/node/workflows:ro
       - ./prompts:/home/node/prompts:ro
     networks:
-      - job_automation_net
+      job_automation_net:
+        aliases:
+          - n8n
+          - job_auto_n8n
 
 volumes:
   postgres_data:

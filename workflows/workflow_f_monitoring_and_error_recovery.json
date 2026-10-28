@@ -7,7 +7,10 @@
       "name": "Error Trigger: Capture Failed Execution",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [220, 260]
+      "position": [
+        220,
+        260
+      ]
     },
     {
       "parameters": {
@@ -21,9 +24,15 @@
       "name": "Postgres: Log Failed Execution Run",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [500, 260],
+      "position": [
+        500,
+        260
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -38,9 +47,15 @@
       "name": "Postgres: Record Failure Audit Event",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [780, 260],
+      "position": [
+        780,
+        260
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -55,23 +70,59 @@
       "name": "Send Email: Alert Administrator",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [1060, 260],
+      "position": [
+        1060,
+        260
+      ],
       "credentials": {
-        "smtp": { "id": "smtp-credentials", "name": "SMTP Email Account" }
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Email Account"
+        }
       },
       "continueOnFail": true
     }
   ],
   "connections": {
     "Error Trigger: Capture Failed Execution": {
-      "main": [[{ "node": "Postgres: Log Failed Execution Run", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Log Failed Execution Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Log Failed Execution Run": {
-      "main": [[{ "node": "Postgres: Record Failure Audit Event", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Record Failure Audit Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Record Failure Audit Event": {
-      "main": [[{ "node": "Send Email: Alert Administrator", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Send Email: Alert Administrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "workflow-f-monitoring-and-error-recovery",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-e80a370584e9",
+  "tags": []
 }

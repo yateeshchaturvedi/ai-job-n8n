@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [220, 260]
+      "position": [
+        220,
+        260
+      ]
     },
     {
       "parameters": {
@@ -17,7 +20,10 @@
       "name": "Code: Prepare Career Portal URLs & Search Queries",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [480, 260]
+      "position": [
+        480,
+        260
+      ]
     },
     {
       "parameters": {
@@ -47,7 +53,10 @@
       "name": "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [760, 180],
+      "position": [
+        760,
+        180
+      ],
       "continueOnFail": true
     },
     {
@@ -96,7 +105,10 @@
       "name": "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [760, 380],
+      "position": [
+        760,
+        380
+      ],
       "continueOnFail": true
     },
     {
@@ -107,7 +119,10 @@
       "name": "Merge: Combine /scrape & Multi-Portal Search Results",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [1040, 260]
+      "position": [
+        1040,
+        260
+      ]
     },
     {
       "parameters": {
@@ -117,30 +132,79 @@
       "name": "Code: Normalize Scraped & Portal Jobs to Common Schema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 260]
+      "position": [
+        1320,
+        260
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [[{ "node": "Code: Prepare Career Portal URLs & Search Queries", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Prepare Career Portal URLs & Search Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code: Prepare Career Portal URLs & Search Queries": {
       "main": [
         [
-          { "node": "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)", "type": "main", "index": 0 },
-          { "node": "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)", "type": "main", "index": 0 }
+          {
+            "node": "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP Request: POST /scrape (Career Pages, RSS, JSON-LD & Firecrawl)": {
-      "main": [[{ "node": "Merge: Combine /scrape & Multi-Portal Search Results", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Merge: Combine /scrape & Multi-Portal Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP Request: JSearch Multi-Portal API (LinkedIn, Indeed, Glassdoor, Naukri)": {
-      "main": [[{ "node": "Merge: Combine /scrape & Multi-Portal Search Results", "type": "main", "index": 1 }]]
+      "main": [
+        [
+          {
+            "node": "Merge: Combine /scrape & Multi-Portal Search Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
     },
     "Merge: Combine /scrape & Multi-Portal Search Results": {
-      "main": [[{ "node": "Code: Normalize Scraped & Portal Jobs to Common Schema", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Normalize Scraped & Portal Jobs to Common Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "subworkflow-source-web-scrape",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-251d1539e3cc",
+  "tags": []
 }

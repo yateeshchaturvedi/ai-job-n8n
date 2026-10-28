@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [220, 260]
+      "position": [
+        220,
+        260
+      ]
     },
     {
       "parameters": {
@@ -33,18 +36,29 @@
       "name": "HTTP Request: Generate & Validate DOCX/PDF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 260]
+      "position": [
+        480,
+        260
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
           "conditions": [
             {
               "id": "verify-parseable",
               "leftValue": "={{ $json.file_validation?.docx_parseable_and_readable }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -55,7 +69,10 @@
       "name": "IF: Output Files Validated?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [740, 260]
+      "position": [
+        740,
+        260
+      ]
     },
     {
       "parameters": {
@@ -65,7 +82,10 @@
       "name": "Code: Format Verified Document Metadata",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1000, 180]
+      "position": [
+        1000,
+        180
+      ]
     },
     {
       "parameters": {
@@ -75,22 +95,59 @@
       "name": "Code: Flag Document For Manual Review",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1000, 360]
+      "position": [
+        1000,
+        360
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [[{ "node": "HTTP Request: Generate & Validate DOCX/PDF", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Generate & Validate DOCX/PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP Request: Generate & Validate DOCX/PDF": {
-      "main": [[{ "node": "IF: Output Files Validated?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "IF: Output Files Validated?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "IF: Output Files Validated?": {
       "main": [
-        [{ "node": "Code: Format Verified Document Metadata", "type": "main", "index": 0 }],
-        [{ "node": "Code: Flag Document For Manual Review", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Code: Format Verified Document Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Flag Document For Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "subworkflow-document-generation",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-f0d957f0050e",
+  "tags": []
 }

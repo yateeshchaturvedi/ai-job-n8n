@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger: Send Digest",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [220, 200]
+      "position": [
+        220,
+        200
+      ]
     },
     {
       "parameters": {
@@ -19,9 +22,15 @@
       "name": "Postgres: Load Undelivered Verified Resumes",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 200],
+      "position": [
+        480,
+        200
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -32,7 +41,10 @@
       "name": "Code: Build Digest Email & Idempotency Key",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [760, 200]
+      "position": [
+        760,
+        200
+      ]
     },
     {
       "parameters": {
@@ -46,9 +58,15 @@
       "name": "Send Email: Deliver Digest",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [1040, 200],
+      "position": [
+        1040,
+        200
+      ],
       "credentials": {
-        "smtp": { "id": "smtp-credentials", "name": "SMTP Email Account" }
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Email Account"
+        }
       },
       "continueOnFail": true
     },
@@ -64,9 +82,15 @@
       "name": "Postgres: Record Notification Sent",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1300, 200],
+      "position": [
+        1300,
+        200
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
@@ -80,7 +104,10 @@
       "name": "Webhook: Capture User Job Feedback",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [220, 480],
+      "position": [
+        220,
+        480
+      ],
       "webhookId": "job-feedback-webhook"
     },
     {
@@ -95,46 +122,109 @@
       "name": "Postgres: Upsert Application Tracking Feedback",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [520, 480],
+      "position": [
+        520,
+        480
+      ],
       "credentials": {
-        "postgres": { "id": "postgres-job-db", "name": "PostgreSQL Job Automation DB" }
+        "postgres": {
+          "id": "postgres-job-db",
+          "name": "PostgreSQL Job Automation DB"
+        }
       }
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify({ status: 'recorded', tracking: $json, auto_submission: 'disabled_requires_explicit_user_approval' }) }}",
-        "options": { "responseCode": 200 }
+        "options": {
+          "responseCode": 200
+        }
       },
       "id": "e1000000-0000-4000-8000-000000000008",
       "name": "Respond to Webhook: Feedback Saved",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [800, 480]
+      "position": [
+        800,
+        480
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger: Send Digest": {
-      "main": [[{ "node": "Postgres: Load Undelivered Verified Resumes", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Load Undelivered Verified Resumes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Load Undelivered Verified Resumes": {
-      "main": [[{ "node": "Code: Build Digest Email & Idempotency Key", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Code: Build Digest Email & Idempotency Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Code: Build Digest Email & Idempotency Key": {
-      "main": [[{ "node": "Send Email: Deliver Digest", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Send Email: Deliver Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send Email: Deliver Digest": {
-      "main": [[{ "node": "Postgres: Record Notification Sent", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Record Notification Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Webhook: Capture User Job Feedback": {
-      "main": [[{ "node": "Postgres: Upsert Application Tracking Feedback", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Postgres: Upsert Application Tracking Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Postgres: Upsert Application Tracking Feedback": {
-      "main": [[{ "node": "Respond to Webhook: Feedback Saved", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook: Feedback Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "errorWorkflow": "workflow-f-monitoring-error-recovery"
-  }
+  },
+  "id": "workflow-e-notification-and-feedback",
+  "active": false,
+  "versionId": "11111111-2222-4333-8444-53f97217200d",
+  "tags": []
 }
